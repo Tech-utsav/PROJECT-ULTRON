@@ -9,16 +9,6 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
-
-/**
- * Minimal client for Google's Gemini API (generativelanguage.googleapis.com).
- *
- * Uses Google AI Studio's free tier — get a free API key at aistudio.google.com,
- * no billing required. Paste it into Ultron's Settings screen.
- *
- * Class name and method signature match the earlier Claude-based client on
- * purpose, so nothing else in the app needed to change.
- */
 class ClaudeApiClient {
 
     // Free-tier model. You can swap this for another Gemini model name later.
@@ -28,20 +18,23 @@ class ClaudeApiClient {
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
         .build()
-
-    /**
-     * @param apiKey Google AI Studio API key
-     * @param systemPrompt Ultron's persona + memory facts
-     * @param history list of (role, content) pairs — role is "user" or "assistant"
-     * @return the assistant's reply text
-     */
-    suspend fun sendMessage(
+suspend fun sendMessage(
         apiKey: String,
         systemPrompt: String,
         history: List<Pair<String, String>>
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
-            val contentsArrval body = JSONObject().apply {
+            val contentsArray = JSONArray()
+            for ((role, content) in history) {
+                val geminiRole = if (role == "assistant") "model" else "user"
+                contentsArray.put(
+                    JSONObject().apply {
+                        put("role", geminiRole)
+                        put("parts", JSONArray().put(JSONObject().apply { put("text", content) }))
+                    }
+                )
+            }
+val body = JSONObject().apply {
                 put("contents", contentsArray)
                 put(
                     "systemInstruction",
@@ -59,8 +52,7 @@ class ClaudeApiClient {
                 .addHeader("content-type", "application/json")
                 .post(body.toString().toRequestBody("application/json".toMediaType()))
                 .build()
-
-            client.newCall(request).execute().use { response ->
+client.newCall(request).execute().use { response ->
                 val responseBody = response.body?.string().orEmpty()
                 if (!response.isSuccessful) {
                     return@withContext Result.failure(
