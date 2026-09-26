@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit
 class ClaudeApiClient {
 
     // Free-tier model. You can swap this for another Gemini model name later.
-    private val model = "gemini-2.5-flash"
+    private val model = "gemini-3.8-flash"
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
